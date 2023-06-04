@@ -1,3 +1,5 @@
+from typing import List
+
 import argparse
 
 from PIL import Image, ImageStat
@@ -8,6 +10,7 @@ from src import download
 
 class Launch:
 	def __init__(self, path_to_old_image:str, path_to_new_image:str,
+	      	filter: List[str] = None,
 			png_atlas_filename: str="minecraft_textures_atlas_blocks.png_0.png",
 			txt_atlas_filename:str="minecraft_textures_atlas_blocks.png.txt") -> None:
 		self.PNG_ATLAS_FILENAME = png_atlas_filename
@@ -17,6 +20,13 @@ class Launch:
 
 		valid_client = download.ValidBlocksClient(self.TXT_ATLAS_FILENAME)
 		blocks = valid_client.exclude_invalid_blocks()
+
+		if filter:
+			filtered_blocks = list()
+			for block in blocks:
+				if block[0] in filter:
+					filtered_blocks.append(block)
+			blocks = filtered_blocks
 
 		calculate_median = calculate_minecraft_blocks_median.CalculateMinecraftBlocksMedian(blocks, self.PNG_ATLAS_FILENAME)
 		self.blocks = calculate_median.get_blocks_with_rgb_medians()
@@ -71,16 +81,20 @@ class Launch:
 
 
 def main():
-	parser = argparse.ArgumentParser(description="Launch application")
-	parser.add_argument("path_to_old_image", type=str, help="Path to the old image")
-	parser.add_argument("path_to_new_image", type=str, help="Path to the new image")
-	parser.add_argument("--png_atlas_filename", type=str, default="minecraft_textures_atlas_blocks.png_0.png",
-						help="PNG atlas filename (default: minecraft_textures_atlas_blocks.png_0.png)")
-	parser.add_argument("--txt_atlas_filename", type=str, default="minecraft_textures_atlas_blocks.png.txt",
-						help="TXT atlas filename (default: minecraft_textures_atlas_blocks.png.txt)")
+	parser = argparse.ArgumentParser(description='Launch class arguments')
+
+	# Add the required arguments
+	parser.add_argument('path_to_old_image', type=str, help='Path to the old image')
+	parser.add_argument('path_to_new_image', type=str, help='Path to the new image')
+
+	# Add the optional arguments
+	parser.add_argument('--filter', nargs='+', help='Filter options')
+	parser.add_argument('--png_atlas_filename', type=str, default='minecraft_textures_atlas_blocks.png_0.png', help='PNG atlas filename')
+	parser.add_argument('--txt_atlas_filename', type=str, default='minecraft_textures_atlas_blocks.png.txt', help='TXT atlas filename')
+
 	args = parser.parse_args()
 
-	launch = Launch(args.path_to_old_image, args.path_to_new_image, args.png_atlas_filename)
+	launch = Launch(args.path_to_old_image, args.path_to_new_image, args.filter, args.png_atlas_filename, args.txt_atlas_filename)
 	launch.create_new_image()
 
 if __name__ == "__main__":

@@ -31,6 +31,11 @@ optional arguments:
 ### Example:
 `python main.py old_image.png blockerized_image.png`
 
+### Filter example:
+`python .\main.py old_image.png blockerized_image.png --filter gray_wool black_wool light_gray_wool`
+<img src="https://github.com/Vazno/Image2MCBlock/assets/96925396/116781f7-a7f0-41b8-910b-931129c9f843" alt="Image2MCBlock">
+</center>
+
 ### How to use textures from newer versions?
 Code uses [Texture atlas](https://minecraft.fandom.com/wiki/Texture_atlas) from minecraft. (1.19.4)
 
