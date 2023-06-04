@@ -30,3 +30,8 @@ optional arguments:
 ```
 ### Example:
 `python main.py old_image.png blockerized_image.png`
+
+### How to use textures from newer versions?
+Code uses [Texture atlas](https://minecraft.fandom.com/wiki/Texture_atlas) from minecraft. (1.19.4)
+
+To get the new textures of current latest update, you need to go in the last version of the game and press `F3+S`, that will generate output in chat, press it, and then copy&paste `minecraft_textures_atlas_blocks.png_0.png`, `minecraft_textures_atlas_blocks.png.txt` to the root folder.
