@@ -11,22 +11,31 @@ To install Image2MCBlock, download repo, and simply use pip:
 
 ## How to run:
 ```
-usage: main.py [-h] [--png_atlas_filename PNG_ATLAS_FILENAME]
+usage: main.py [-h] [--filter FILTER [FILTER ...]]      
+               [--scale_factor SCALE_FACTOR]
+               [--method {abs_diff,euclidean}]
+               [--png_atlas_filename PNG_ATLAS_FILENAME]
                [--txt_atlas_filename TXT_ATLAS_FILENAME]
-               path_to_old_image path_to_new_image
+               path_to_old_image path_to_new_image      
 
-Launch application
+Launch class arguments
 
 positional arguments:
   path_to_old_image     Path to the old image
   path_to_new_image     Path to the new image
 
-optional arguments:
-  -h, --help            show this help message and exit
+options:
+  -h, --help            show this help message and exit 
+  --filter FILTER [FILTER ...]
+                        Filter options
+  --scale_factor SCALE_FACTOR
+                        Scale factor
+  --method {abs_diff,euclidean}
+                        Method of finding the closest color to block       
   --png_atlas_filename PNG_ATLAS_FILENAME
-                        PNG atlas filename (default: minecraft_textures_atlas_blocks.png_0.png)
+                        PNG atlas filename
   --txt_atlas_filename TXT_ATLAS_FILENAME
-                        TXT atlas filename (default: minecraft_textures_atlas_blocks.png.txt)
+                        TXT atlas filename
 ```
 ### Example:
 `python main.py old_image.png blockerized_image.png`
