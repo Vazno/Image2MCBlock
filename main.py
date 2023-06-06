@@ -1,30 +1,33 @@
 import json
 import pathlib
 import math
+
 from typing import List, Tuple, Literal
 
 import argparse
+import moviepy.editor as mp
 from PIL import Image, ImageStat
 
 from src import calculate_minecraft_blocks_median
 from src import crop_image
 from src import download
 from src import resize
+from src import convert_video
+from src.utils import is_video_file
 
 class Launch:
-	def __init__(self, path_to_old_image:str, path_to_new_image:str,
-	      	filter: List[str] = None, scale_factor: int = 0,
+	def __init__(self, filter: List[str] = None,
+			scale_factor: int = 0,
 		    method: Literal["abs_diff", "euclidean"] = "euclidean",
 			png_atlas_filename: str="minecraft_textures_atlas_blocks.png_0.png",
 			txt_atlas_filename:str="minecraft_textures_atlas_blocks.png.txt") -> None:
 
 		self.PNG_ATLAS_FILENAME = png_atlas_filename
 		self.TXT_ATLAS_FILENAME = txt_atlas_filename
-		self.path_to_old_image = path_to_old_image
-		self.path_to_new_image = path_to_new_image
 		self.CACHE_FILENAME = "blocks.json"
-		self.scale_factor = scale_factor
 		self.method = method
+		self.scale_factor = scale_factor
+		self.blocks_image = Image.open(self.PNG_ATLAS_FILENAME, "r")
 
 		blocks = self._get_blocks_cached()
 
@@ -36,13 +39,6 @@ class Launch:
 			blocks = filtered_blocks
 
 		self.blocks = blocks
-
-		self.old_image = crop_image.CropImage(path_to_old_image)
-		self.cropped_old_image = self.old_image.crop_to_make_divisible()
-
-		if scale_factor > 0:
-			self.cropped_old_image = resize.resize_image(self.cropped_old_image, self.scale_factor)
-
 
 	def _get_blocks_cached(self) -> List[Tuple[str, int, int, Tuple[int, int, int]]]:
 		'''Gets the blocks from cache, and if it doesn't exist, re-validate everything from internet,
@@ -97,12 +93,26 @@ class Launch:
 
 		return closest_block
 
-	def create_new_image(self):
-		width, height = self.cropped_old_image.size
+	def convert(self, path: str, output_path: str) -> None:
+		if is_video_file(path):
+			video = mp.VideoFileClip(path)
+			converted_video = convert_video.process_video_with_pil(video, self.create_new_image)
+			converted_video.write_videofile(output_path, fps=video.fps)
+		else:
+			with Image.open(path, "r") as img:
+				converted_image = self.create_new_image(img)
+				converted_image.save(output_path)
+
+	def create_new_image(self, image: Image) -> Image:
+		image_cropper = crop_image.CropImage(image)
+		cropped_old_image = image_cropper.crop_to_make_divisible()
+
+		if self.scale_factor > 0 or self.scale_factor < 0:
+			cropped_old_image = resize.resize_image(cropped_old_image, self.scale_factor)
+
+		width, height = cropped_old_image.size
 		chunks_x = width // 16
 		chunks_y = height // 16
-
-		blocks_image = Image.open(self.PNG_ATLAS_FILENAME, "r")
 
 		for x in range(chunks_x):
 			for y in range(chunks_y):
@@ -110,23 +120,23 @@ class Launch:
 				upper = y * 16
 				right = left + 16
 				lower = upper + 16
-				chunk = self.cropped_old_image.crop((left, upper, right, lower))
+				chunk = cropped_old_image.crop((left, upper, right, lower))
 
 				if self.method == "euclidean":
 					lowest_block = self.find_closest_block_euclidean_distance(chunk)
 				elif self.method == "abs_diff":
 					lowest_block = self.find_closest_block_rgb_abs_diff(chunk)
 
-				self.cropped_old_image.paste(blocks_image.crop([lowest_block[1], lowest_block[2], lowest_block[1]+16, lowest_block[2]+16]), [left,upper,right,lower])
+				cropped_old_image.paste(self.blocks_image.crop([lowest_block[1], lowest_block[2], lowest_block[1]+16, lowest_block[2]+16]), [left,upper,right,lower])
 
-		self.cropped_old_image.save(self.path_to_new_image)
+		return cropped_old_image
 
 def main():
 	parser = argparse.ArgumentParser(description='Launch class arguments')
 
 	# Add the required arguments
-	parser.add_argument('path_to_old_image', type=str, help='Path to the old image')
-	parser.add_argument('path_to_new_image', type=str, help='Path to the new image')
+	parser.add_argument('path_to_file', type=str, help='Path to the old image')
+	parser.add_argument('output_file', type=str, help='Path to the new image')
 
 	# Add the optional arguments
 	parser.add_argument('--filter', nargs='+', help='Filter options')
@@ -137,12 +147,12 @@ def main():
 
 	args = parser.parse_args()
 
-	launch = Launch(args.path_to_old_image,
-		args.path_to_new_image, args.filter,
-		args.scale_factor, args.method,
+	launch = Launch(args.filter,
+		args.scale_factor,
+		args.method,
 		args.png_atlas_filename,
 		args.txt_atlas_filename)
-	launch.create_new_image()
+	launch.convert(args.path_to_file, args.output_file)
 
 if __name__ == "__main__":
 	main()

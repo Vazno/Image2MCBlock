@@ -1,3 +1,5 @@
 argparse
 pillow
 requests
+moviepy
+numpy

@@ -11,7 +11,6 @@ class ValidBlocksClient:
 		self.NBTDOC_END = '];'
 		self.TXT_ATLAS_FILENAME = txt_atlas_filename
 		self.response = requests.get(self.LINK_TO_BLOCKS_LIST)
-		
 
 	def _get_valid_blocks_list_from_response(self) -> List[str]:
 		'''Function for reading .nbtdoc file, and getting list of all valid blocks (that can be placed)'''
