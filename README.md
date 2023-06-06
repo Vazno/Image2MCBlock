@@ -20,8 +20,8 @@ usage: main.py [-h] [--filter FILTER [FILTER ...]] [--scale_factor SCALE_FACTOR]
 Launch class arguments
 
 positional arguments:
-  path_to_file          Path to the old image
-  output_file           Path to the new image
+  path_to_file          Path to the input file
+  output_file           Path to the output file
 
 options:
   -h, --help            show this help message and exit

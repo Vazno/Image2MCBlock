@@ -135,8 +135,8 @@ def main():
 	parser = argparse.ArgumentParser(description='Launch class arguments')
 
 	# Add the required arguments
-	parser.add_argument('path_to_file', type=str, help='Path to the old image')
-	parser.add_argument('output_file', type=str, help='Path to the new image')
+	parser.add_argument('path_to_file', type=str, help='Path to the input file')
+	parser.add_argument('output_file', type=str, help='Path to the output file')
 
 	# Add the optional arguments
 	parser.add_argument('--filter', nargs='+', help='Filter options')
