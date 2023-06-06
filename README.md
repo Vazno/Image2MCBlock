@@ -1,7 +1,7 @@
 <center>
 <img src="https://github.com/Vazno/Image2MCBlock/assets/96925396/b81e703f-14b4-434e-835b-6926649f0971" alt="Image2MCBlock">
 </center>
-<h6 align="center">Convert images to minecraft blockerized image</h6>
+<h6 align="center">Convert images or videos to minecraft blockerized file</h6>
 
 ---
 ## Installation
@@ -11,27 +11,26 @@ To install Image2MCBlock, download repo, and simply use pip:
 
 ## How to run:
 ```
-usage: main.py [-h] [--filter FILTER [FILTER ...]]      
-               [--scale_factor SCALE_FACTOR]
+usage: main.py [-h] [--filter FILTER [FILTER ...]] [--scale_factor SCALE_FACTOR]
                [--method {abs_diff,euclidean}]
                [--png_atlas_filename PNG_ATLAS_FILENAME]
                [--txt_atlas_filename TXT_ATLAS_FILENAME]
-               path_to_old_image path_to_new_image      
+               path_to_file output_file
 
 Launch class arguments
 
 positional arguments:
-  path_to_old_image     Path to the old image
-  path_to_new_image     Path to the new image
+  path_to_file          Path to the old image
+  output_file           Path to the new image
 
 options:
-  -h, --help            show this help message and exit 
+  -h, --help            show this help message and exit
   --filter FILTER [FILTER ...]
                         Filter options
   --scale_factor SCALE_FACTOR
                         Scale factor
   --method {abs_diff,euclidean}
-                        Method of finding the closest color to block       
+                        Method of finding the closest color to block
   --png_atlas_filename PNG_ATLAS_FILENAME
                         PNG atlas filename
   --txt_atlas_filename TXT_ATLAS_FILENAME
