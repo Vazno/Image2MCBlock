@@ -28,6 +28,7 @@ class Launch:
 		self.method = method
 		self.scale_factor = scale_factor
 		self.blocks_image = Image.open(self.PNG_ATLAS_FILENAME, "r")
+		self.caching = dict()
 
 		blocks = self._get_blocks_cached()
 
@@ -64,34 +65,47 @@ class Launch:
 		If there are multiple blocks with equal minimum difference, it will return the first one encountered.
 		'''
 		og_median = ImageStat.Stat(chunk).median
+		og_median_rgb = tuple([og_median[0], og_median[1], og_median[2]])
 
-		rgb_closests_diff = list()
-		for channel in range(3):
-			min_diff_block = min(self.blocks, key=lambda x: abs(og_median[channel] - x[3][channel]))
-			rgb_closests_diff.append(min_diff_block)
+		if og_median_rgb in self.caching:
+			return self.caching[og_median_rgb]
+		else:
 
-		closest_block = min(rgb_closests_diff, key=lambda x: sum(abs(a - b) for a, b in zip(x[3], og_median)))
-		return closest_block
+			rgb_closests_diff = list()
+			for channel in range(3):
+				min_diff_block = min(self.blocks, key=lambda x: abs(og_median[channel] - x[3][channel]))
+				rgb_closests_diff.append(min_diff_block)
+
+			closest_block = min(rgb_closests_diff, key=lambda x: sum(abs(a - b) for a, b in zip(x[3], og_median)))
+			self.caching[og_median_rgb] = closest_block
+			return closest_block
 
 	def find_closest_block_euclidean_distance(self, chunk: Image):
 		# Calculate the median RGB values of the input image
 		og_median = ImageStat.Stat(chunk).median
+		og_median_rgb = tuple([og_median[0], og_median[1], og_median[2]])
 
-		# Initialize variables for tracking the closest block
-		closest_block = None
-		min_distance = math.inf
+		# Checking if the median is in caching
+		if og_median_rgb in self.caching:
+			return self.caching[og_median_rgb]
 
-		# Iterate over each block and calculate the Euclidean distance
-		for block in self.blocks:
-			block_rgb = block[3]
-			distance = math.sqrt(sum((a - b) ** 2 for a, b in zip(og_median, block_rgb)))
+		else:
+			# Initialize variables for tracking the closest block
+			closest_block = None
+			min_distance = math.inf
 
-			# Update closest block if a closer match is found
-			if distance < min_distance:
-				min_distance = distance
-				closest_block = block
+			# Iterate over each block and calculate the Euclidean distance
+			for block in self.blocks:
+				block_rgb = block[3]
+				distance = math.sqrt(sum((a - b) ** 2 for a, b in zip(og_median, block_rgb)))
 
-		return closest_block
+				# Update closest block if a closer match is found
+				if distance < min_distance:
+					min_distance = distance
+					closest_block = block
+
+			self.caching[og_median_rgb] = closest_block
+			return closest_block
 
 	def convert(self, path: str, output_path: str) -> None:
 		if is_video_file(path):
