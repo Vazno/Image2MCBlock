@@ -15,6 +15,36 @@ from src import resize
 from src import convert_video
 from src.utils import is_video_file
 
+def generate_color_variations(color_dict, max_abs_difference):
+	new_dict = {}
+	
+	for rgb_tuple, value in color_dict.items():
+		r, g, b = rgb_tuple
+		
+		for dr in range(-max_abs_difference, max_abs_difference + 1):
+			new_r = r + dr
+			
+			if not 0 <= new_r <= 255:
+				continue
+			
+			for dg in range(-max_abs_difference, max_abs_difference + 1):
+				new_g = g + dg
+				
+				if not 0 <= new_g <= 255:
+					continue
+				
+				for db in range(-max_abs_difference, max_abs_difference + 1):
+					new_b = b + db
+					
+					if 0 <= new_b <= 255:
+						total_diff = abs(new_r - r) + abs(new_g - g) + abs(new_b - b)
+						
+						if total_diff <= max_abs_difference:
+							new_rgb_tuple = (new_r, new_g, new_b)
+							new_dict[new_rgb_tuple] = value
+	
+	return new_dict
+
 class Launch:
 	def __init__(self, filter: List[str] = None,
 			scale_factor: int = 0,
@@ -78,6 +108,10 @@ class Launch:
 
 			closest_block = min(rgb_closests_diff, key=lambda x: sum(abs(a - b) for a, b in zip(x[3], og_median)))
 			self.caching[og_median_rgb] = closest_block
+			new_dict = dict()
+			new_dict[og_median_rgb] = closest_block
+			all_permutations = generate_color_variations(new_dict, 15)
+			self.caching.update(all_permutations)
 			return closest_block
 
 	def find_closest_block_euclidean_distance(self, chunk: Image):
@@ -105,6 +139,10 @@ class Launch:
 					closest_block = block
 
 			self.caching[og_median_rgb] = closest_block
+			new_dict = dict()
+			new_dict[og_median_rgb] = closest_block
+			all_permutations = generate_color_variations(new_dict, 15)
+			self.caching.update(all_permutations)
 			return closest_block
 
 	def convert(self, path: str, output_path: str) -> None:
