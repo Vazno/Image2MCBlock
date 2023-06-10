@@ -59,14 +59,24 @@ jobs:
       - name: Build with pyinstaller for ${{ matrix.TARGET }}
         run: ${{ matrix.CMD_BUILD }}
       - name: Save Release URL File
-        run: echo "${{ steps.create_release.outputs.upload_url }}" > release_url.txt
+        run: echo "::set-output name=release_url::${{ steps.create_release.outputs.upload_url }}" >> ${{ github.workspace }}/release_url.txt
       - name: Upload Release Asset
-        uses: softprops/action-gh-release@v1
+        id: upload_asset
+        uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          files: |
-            dist/${{ matrix.OUT_FILE_NAME }}
-          label: ${{ matrix.OUT_FILE_NAME }}
-          content_type: ${{ matrix.ASSET_MIME }}
-          release: ${{ needs.createrelease.outputs.id }}
+          upload_url: ${{ needs.createrelease.outputs.upload_url }}
+          asset_path: ${{ github.workspace }}/dist/${{ matrix.OUT_FILE_NAME }}
+          asset_name: ${{ matrix.OUT_FILE_NAME }}
+          asset_content_type: ${{ matrix.ASSET_MIME }}
+      - name: Upload Release URL File
+        id: upload_url_file
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.createrelease.outputs.upload_url }}
+          asset_path: ${{ github.workspace }}/release_url.txt
+          asset_name: release_url.txt
+          asset_content_type: text/plain
