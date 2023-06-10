@@ -34,16 +34,6 @@ jobs:
           echo "RELEASE_NAME=${RELEASE_NAME}" >> $GITHUB_ENV
           echo "RELEASE_BODY=${RELEASE_BODY}" >> $GITHUB_ENV
 
-      - name: Output Release URL File
-        id: release_url
-        run: echo "${{ github.event.repository.releases_url }}" > release_url.txt
-
-      - name: Save Release URL File for publish
-        uses: actions/upload-artifact@v2
-        with:
-          name: release_url
-          path: release_url.txt
-
   build:
     name: Build packages
     needs: createrelease
@@ -86,16 +76,14 @@ jobs:
       - name: Build with pyinstaller for ${{ matrix.TARGET }}
         run: ${{ matrix.CMD_BUILD }}
 
-      - name: Load Release URL File from release job
-        uses: actions/download-artifact@v2
-        with:
-          name: release_url
-
       - name: Get Release File Name & Upload URL
         id: get_release_info
         run: |
-          value=$(cat release_url/release_url.txt)
-          echo "::set-output name=upload_url::$value"
+          upload_url=$(curl --header "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            --header "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/latest" | jq -r '.upload_url')
+
+          echo "::set-output name=upload_url::$upload_url"
 
       - name: Upload Release Asset
         id: upload-release-asset
