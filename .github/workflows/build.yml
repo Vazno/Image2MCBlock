@@ -1,9 +1,5 @@
 name: build
-
-on:
-  push:
-    tags:
-      - '*'
+on: push
 
 jobs:
   get-next-release-number:
