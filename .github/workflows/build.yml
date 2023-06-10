@@ -12,7 +12,7 @@ jobs:
       matrix:
         include:
           - os: macos-latest
-            platform: mac-os
+            platform: macos
             CMD_BUILD: pyinstaller --onefile --add-data "*.png:." --add-data "*.txt:." --hidden-import pkg_resources.py2_warn --name "Image2MCBlock-macos" --additional-hooks-dir=. main.py
             OUT_FILE_NAME: Image2MCBlock-macos
             ASSET_MIME: application/octet-stream
@@ -62,8 +62,8 @@ jobs:
         mkdir release
         mv artifacts/Image2MCBlock-linux/Image2MCBlock-linux release/Image2MCBlock-linux
         mv artifacts/Image2MCBlock-windows/Image2MCBlock-windows.exe release/Image2MCBlock-windows.exe
-        mv artifacts/Image2MCBlock-mac-os/Image2MCBlock-macos release/Image2MCBlock-macos
-
+        mv artifacts/Image2MCBlock-macos/Image2MCBlock-macos release/Image2MCBlock-macos
+      working-directory: ${{ github.workspace }}
     - name: Create release
       uses: softprops/action-gh-release@v1
       with:
