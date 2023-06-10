@@ -1,7 +1,6 @@
 name: build
 
-on:
-  push:
+on: push
 
 jobs:
   createrelease:
@@ -11,16 +10,23 @@ jobs:
       - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: |
-            release_url.txt
-          draft: true
-          prerelease: false
+          files: release_url.txt
           body: |
             Commit ${{ github.sha }}
             ${{ github.event.commits[0].message }}
+          draft: true
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Output Release URL File
+        run: echo "${{ steps.create_release.outputs.url }}" > release_url.txt
+      - name: Save Release URL File for publish
+        uses: actions/upload-artifact@v1
+        with:
+          name: release_url
+          path: release_url.txt
 
   build:
     name: Build packages
@@ -58,25 +64,20 @@ jobs:
         run: python -m pip install pyinstaller
       - name: Build with pyinstaller for ${{ matrix.TARGET }}
         run: ${{ matrix.CMD_BUILD }}
-      - name: Save Release URL File
-        run: echo "::set-output name=release_url::${{ steps.create_release.outputs.upload_url }}" >> ${{ github.workspace }}/release_url.txt
+      - name: Load Release URL File from release job
+        uses: actions/download-artifact@v1
+        with:
+          name: release_url
+      - name: Get Release URL
+        id: get_release_info
+        run: |
+          value=`cat release_url/release_url.txt`
+          echo ::set-output name=url::$value
       - name: Upload Release Asset
-        id: upload_asset
-        uses: actions/upload-release-asset@v1
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/${{ matrix.OUT_FILE_NAME }}
+          name: ${{ matrix.OUT_FILE_NAME }}
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.createrelease.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/dist/${{ matrix.OUT_FILE_NAME }}
-          asset_name: ${{ matrix.OUT_FILE_NAME }}
-          asset_content_type: ${{ matrix.ASSET_MIME }}
-      - name: Upload Release URL File
-        id: upload_url_file
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.createrelease.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/release_url.txt
-          asset_name: release_url.txt
-          asset_content_type: text/plain
