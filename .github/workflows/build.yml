@@ -37,8 +37,7 @@ jobs:
         include:
           - os: macos-latest
             TARGET: macos
-            CMD_BUILD: pyinstaller --onefile --add-data "*.png;." --add-data "*.txt;." --hidden-import pkg_resources.py2_warn --name Image2MCBlock-windows --additional-hooks-dir=. main.py
-
+            CMD_BUILD: pyinstaller --onefile --add-data "*.png:." --add-data "*.txt:." --hidden-import pkg_resources.py2_warn --name Image2MCBlock-macos --additional-hooks-dir=. main.py
             OUT_FILE_NAME: Image2MCBlock-macos
             ASSET_MIME: application/octet-stream
           - os: windows-latest
@@ -49,8 +48,7 @@ jobs:
             ASSET_MIME: application/vnd.microsoft.portable-executable
           - os: ubuntu-latest
             TARGET: x86_64-linux-gnu
-            CMD_BUILD: pyinstaller --onefile --add-data "*.png;." --add-data "*.txt;." --hidden-import pkg_resources.py2_warn --name Image2MCBlock-windows --additional-hooks-dir=. main.py
-
+            CMD_BUILD: pyinstaller --onefile --add-data "*.png:." --add-data "*.txt:." --hidden-import pkg_resources.py2_warn --name Image2MCBlock-linux --additional-hooks-dir=. main.py
             OUT_FILE_NAME: Image2MCBlock-linux
             ASSET_MIME: application/octet-stream
     steps:
