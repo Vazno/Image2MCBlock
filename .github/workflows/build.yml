@@ -1,97 +1,54 @@
-name: build
+name: Compile Python Code
 
-on: push
+on:
+  push:
+    branches:
+      - main
 
 jobs:
-  createrelease:
-    name: Create Release
-    runs-on: [ubuntu-latest]
-    env:
-      RELEASE_TAG: release${{ github.run_number }}
-      RELEASE_NAME: Build ${{ github.run_number }}
-      RELEASE_BODY: ${{ github.sha }} ${{ github.event.commits[0].message }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.10'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
-
-      - name: Install pyinstaller
-        run: python -m pip install pyinstaller
-
-      - name: Create Release
-        id: create_release
-        run: |
-          echo "RELEASE_TAG=${RELEASE_TAG}" >> $GITHUB_ENV
-          echo "RELEASE_NAME=${RELEASE_NAME}" >> $GITHUB_ENV
-          echo "RELEASE_BODY=${RELEASE_BODY}" >> $GITHUB_ENV
-
   build:
-    name: Build packages
-    needs: createrelease
     runs-on: ${{ matrix.os }}
+
     strategy:
       matrix:
-        include:
-          - os: macos-latest
-            TARGET: macos
-            CMD_BUILD: pyinstaller --noconfirm --onefile --add-data "src/*.py:src" --add-data "*.png:." -n minecraft_nick_generator-macos main.py
-            OUT_FILE_NAME: minecraft_nick_generator-macos
-            ASSET_MIME: application/octet-stream
-          - os: windows-latest
-            TARGET: windows
-            CMD_BUILD: pyinstaller --noconfirm --onefile --add-data "src/*.py;src" --add-data "*.png;." -n minecraft_nick_generator-windows main.py
-            OUT_FILE_NAME: minecraft_nick_generator-windows.exe
-            ASSET_MIME: application/vnd.microsoft.portable-executable
-          - os: ubuntu-latest
-            TARGET: x86_64-linux-gnu
-            CMD_BUILD: pyinstaller --noconfirm --onefile --add-data "src/*.py:src" --add-data "*.png:." -n minecraft_nick_generator-linux main.py
-            OUT_FILE_NAME: minecraft_nick_generator-linux
-            ASSET_MIME: application/octet-stream
+        os: [macos-latest, ubuntu-latest, windows-latest]
+
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Set up Python 3.10
+      - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: '3.10'
+          python-version: 3.x
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
+          pip install -r requirements.txt
 
-      - name: Install pyinstaller
-        run: python -m pip install pyinstaller
-
-      - name: Build with pyinstaller for ${{ matrix.TARGET }}
-        run: ${{ matrix.CMD_BUILD }}
-
-      - name: Get Release File Name & Upload URL
-        id: get_release_info
+      - name: Compile Python code
         run: |
-          upload_url=$(curl --header "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            --header "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/${{ github.repository }}/releases/latest" | jq -r '.upload_url')
+          pyinstaller --onefile main.py
 
-          echo "::set-output name=upload_url::$upload_url"
+          # Iterate over all .py files in the 'src' directory and compile them
+          for file in src/*.py; do
+            pyinstaller --onefile "$file"
+          done
 
-      - name: Upload Release Asset
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Move the executables to a separate directory
+          mkdir -p dist
+          mv dist/*.exe dist/windows/
+          mv dist/*.out dist/linux/
+          mv dist/*.app dist/macos/
+
+      - name: Create draft release
+        uses: softprops/action-gh-release@v1
         with:
-          upload_url: ${{ steps.get_release_info.outputs.upload_url }}
-          asset_path: ./dist/${{ matrix.OUT_FILE_NAME }}
-          asset_name: ${{ matrix.OUT_FILE_NAME }}
-          asset_content_type: ${{ matrix.ASSET_MIME }}
+          files: |
+            dist/windows/*
+            dist/linux/*
+            dist/macos/*
+          draft: true
+          title: Draft Release
+
