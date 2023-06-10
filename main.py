@@ -58,7 +58,7 @@ class Launch:
 		self.CACHE_FILENAME = "blocks.json"
 		self.method = method
 		self.scale_factor = scale_factor
-		self.blocks_image = Image.open(self.PNG_ATLAS_FILENAME, "r")
+		self.blocks_image = Image.open(resource_path(self.PNG_ATLAS_FILENAME), "r")
 		self.caching = dict()
 
 		blocks = self._get_blocks_cached()
