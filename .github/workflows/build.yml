@@ -46,7 +46,6 @@ jobs:
           - os: windows-latest
             TARGET: windows
             CMD_BUILD: pyinstaller --onefile --add-data "*.png;." --add-data "*.txt;." --hidden-import pkg_resources.py2_warn --name Image2MCBlock-windows --additional-hooks-dir=. main.py
-
             OUT_FILE_NAME: Image2MCBlock-windows.exe
             ASSET_MIME: application/vnd.microsoft.portable-executable
           - os: ubuntu-latest
@@ -55,9 +54,9 @@ jobs:
             OUT_FILE_NAME: Image2MCBlock-linux
             ASSET_MIME: application/octet-stream
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - name: Set up Python 3.10
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v2
         with:
           python-version: '3.10'
       - name: Install dependencies
@@ -69,7 +68,7 @@ jobs:
       - name: Build with pyinstaller for ${{ matrix.TARGET }}
         run: ${{ matrix.CMD_BUILD }}
       - name: Load Release URL File from release job
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@v2
         with:
           name: release_url
       - name: Get Release URL
