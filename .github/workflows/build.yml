@@ -6,9 +6,9 @@ on:
       - '*'
 
 jobs:
-  createrelease:
+  create_release:
     name: Create Release
-    runs-on: [ubuntu-latest]
+    runs-on: ubuntu-latest
     steps:
       - name: Create Release
         id: create_release
@@ -36,7 +36,7 @@ jobs:
 
   build:
     name: Build packages
-    needs: createrelease
+    needs: create_release
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
