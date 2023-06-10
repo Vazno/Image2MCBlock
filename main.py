@@ -50,15 +50,15 @@ class Launch:
 	def __init__(self, filter: List[str] = None,
 			scale_factor: int = 0,
 		    method: Literal["abs_diff", "euclidean"] = "euclidean",
-			png_atlas_filename: str="minecraft_textures_atlas_blocks.png_0.png",
-			txt_atlas_filename:str="minecraft_textures_atlas_blocks.png.txt") -> None:
+			png_atlas_filename: str=resource_path("minecraft_textures_atlas_blocks.png_0.png"),
+			txt_atlas_filename:str=resource_path("minecraft_textures_atlas_blocks.png.txt")) -> None:
 
 		self.PNG_ATLAS_FILENAME = png_atlas_filename
 		self.TXT_ATLAS_FILENAME = txt_atlas_filename
 		self.CACHE_FILENAME = "blocks.json"
 		self.method = method
 		self.scale_factor = scale_factor
-		self.blocks_image = Image.open(resource_path(self.PNG_ATLAS_FILENAME), "r")
+		self.blocks_image = Image.open(self.PNG_ATLAS_FILENAME, "r")
 		self.caching = dict()
 
 		blocks = self._get_blocks_cached()
@@ -79,7 +79,7 @@ class Launch:
 			with open(os.path.join(get_execution_folder(), self.CACHE_FILENAME), "r") as f:
 				blocks = json.load(f)
 		else:
-			valid_client = download.ValidBlocksClient(resource_path(self.TXT_ATLAS_FILENAME))
+			valid_client = download.ValidBlocksClient(self.TXT_ATLAS_FILENAME)
 			blocks = valid_client.exclude_invalid_blocks()
 
 			calculate_median = calculate_minecraft_blocks_median.CalculateMinecraftBlocksMedian(blocks, self.PNG_ATLAS_FILENAME)
@@ -195,8 +195,8 @@ def main():
 	parser.add_argument('--filter', nargs='+', help='Filter options')
 	parser.add_argument('--scale_factor', type=int, help='Scale factor', default=0)
 	parser.add_argument('--method', type=str, choices=["abs_diff", "euclidean"], help='Method of finding the closest color to block', default="euclidean", required=False)
-	parser.add_argument('--png_atlas_filename', type=str, default='minecraft_textures_atlas_blocks.png_0.png', help='PNG atlas filename')
-	parser.add_argument('--txt_atlas_filename', type=str, default='minecraft_textures_atlas_blocks.png.txt', help='TXT atlas filename')
+	parser.add_argument('--png_atlas_filename', type=str, default=resource_path('minecraft_textures_atlas_blocks.png_0.png'), help='PNG atlas filename')
+	parser.add_argument('--txt_atlas_filename', type=str, default=resource_path('minecraft_textures_atlas_blocks.png.txt'), help='TXT atlas filename')
 
 	args = parser.parse_args()
 
