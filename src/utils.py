@@ -1,4 +1,8 @@
+import sys
+import os
+import pathlib
 import mimetypes
+
 from PIL import Image
 
 def has_transparency(img: Image):
@@ -24,3 +28,21 @@ def is_video_file(file_path):
 	
 	file_type, _ = mimetypes.guess_type(file_path)
 	return file_type is not None and file_type.startswith('video/')
+
+def resource_path(relative_path):
+	""" Get absolute path to resource, works for dev and for PyInstaller """
+	try:
+		# PyInstaller creates a temp folder and stores path in _MEIPASS
+		base_path = sys._MEIPASS
+	except Exception:
+		base_path = os.path.abspath(".")
+
+	return os.path.join(base_path, relative_path)
+
+def get_execution_folder():
+	if getattr(sys, 'frozen', False):
+		# If the script is running as a bundled executable (e.g., PyInstaller)
+		return os.path.dirname(sys.executable)
+	else:
+		# If the script is running as a standalone .py file
+		return os.path.dirname(os.path.realpath(sys.argv[0]))

@@ -1,3 +1,4 @@
+import os
 import json
 import pathlib
 import math
@@ -13,7 +14,7 @@ from src import crop_image
 from src import download
 from src import resize
 from src import convert_video
-from src.utils import is_video_file
+from src.utils import is_video_file, resource_path, get_execution_folder
 
 def generate_color_variations(color_dict, max_abs_difference):
 	new_dict = {}
@@ -74,17 +75,17 @@ class Launch:
 	def _get_blocks_cached(self) -> List[Tuple[str, int, int, Tuple[int, int, int]]]:
 		'''Gets the blocks from cache, and if it doesn't exist, re-validate everything from internet,
 		and cache blocks and their medians.'''
-		if pathlib.Path(self.CACHE_FILENAME).exists():
-			with open(self.CACHE_FILENAME, "r") as f:
+		if pathlib.Path(os.path.join(get_execution_folder(), self.CACHE_FILENAME)).exists():
+			with open(os.path.join(get_execution_folder(), self.CACHE_FILENAME), "r") as f:
 				blocks = json.load(f)
 		else:
-			valid_client = download.ValidBlocksClient(self.TXT_ATLAS_FILENAME)
+			valid_client = download.ValidBlocksClient(resource_path(self.TXT_ATLAS_FILENAME))
 			blocks = valid_client.exclude_invalid_blocks()
 
 			calculate_median = calculate_minecraft_blocks_median.CalculateMinecraftBlocksMedian(blocks, self.PNG_ATLAS_FILENAME)
 			blocks = calculate_median.get_blocks_with_rgb_medians()
 
-			with open(self.CACHE_FILENAME, "w") as f:
+			with open(os.path.join(get_execution_folder(), self.CACHE_FILENAME), "w") as f:
 				json.dump(blocks, f, indent=4)
 		return blocks
 

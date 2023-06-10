@@ -1,7 +1,8 @@
-import requests
 import re
-
 from typing import List, Tuple
+import requests
+
+from .utils import resource_path
 
 class ValidBlocksClient:
 	def __init__(self, txt_atlas_filename: str) -> None:
@@ -29,7 +30,7 @@ class ValidBlocksClient:
 		'''Parses txt atlas file, and returns list of blocks.'''
 		blocks = list()
 		changed_blocks = list()
-		with open(self.TXT_ATLAS_FILENAME, "r") as atlas_fp:
+		with open(resource_path(self.TXT_ATLAS_FILENAME), "r") as atlas_fp:
 			blocks = re.findall(self.BLOCK_INFO_PLACE_PATTERN, atlas_fp.read())
 			for name, x, y in blocks:
 				changed_blocks.append([name, int(x), int(y)])

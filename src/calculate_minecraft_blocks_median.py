@@ -2,7 +2,7 @@ from typing import List, Tuple
 
 from PIL import Image, ImageStat
 
-from .utils import has_transparency
+from .utils import has_transparency, resource_path
 
 class CalculateMinecraftBlocksMedian:
 	def __init__(self, blocks: List[Tuple[str, int, int]], png_atlas_filename: str) -> None:
@@ -12,7 +12,7 @@ class CalculateMinecraftBlocksMedian:
 	def get_blocks_with_rgb_medians(self) -> List[Tuple[str, int, int, Tuple[int, int, int]]]:
 		'''Returns list with blocks, and adds list with medians in each channel (RGB)'''
 		blocks_with_median = list()
-		with Image.open(self.PNG_ATLAS_FILENAME, "r") as blocks_image:
+		with Image.open(resource_path(self.PNG_ATLAS_FILENAME), "r") as blocks_image:
 			for name, x, y in self.blocks:
 				cropped = blocks_image.crop([x, y, x+16, y+16])
 				median = ImageStat.Stat(cropped).median
