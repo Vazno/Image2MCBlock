@@ -1,9 +1,9 @@
 name: build
 
 on:
-  release:
-    types:
-      - created
+  push:
+    tags:
+      - '*'
 
 jobs:
   createrelease:
@@ -33,7 +33,7 @@ jobs:
 
   build:
     name: Build packages
-    needs: [createrelease]
+    needs: createrelease
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -46,6 +46,7 @@ jobs:
           - os: windows-latest
             TARGET: windows
             CMD_BUILD: pyinstaller --onefile --add-data "*.png;." --add-data "*.txt;." --hidden-import pkg_resources.py2_warn --name Image2MCBlock-windows --additional-hooks-dir=. main.py
+
             OUT_FILE_NAME: Image2MCBlock-windows.exe
             ASSET_MIME: application/vnd.microsoft.portable-executable
           - os: ubuntu-latest
