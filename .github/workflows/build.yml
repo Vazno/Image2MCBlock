@@ -6,6 +6,10 @@ jobs:
   createrelease:
     name: Create Release
     runs-on: [ubuntu-latest]
+    env:
+      RELEASE_TAG: release${{ github.run_number }}
+      RELEASE_NAME: Build ${{ github.run_number }}
+      RELEASE_BODY: ${{ github.sha }} ${{ github.event.commits[0].message }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -26,9 +30,9 @@ jobs:
       - name: Create Release
         id: create_release
         run: |
-          echo "::set-env name=RELEASE_TAG::release${{ github.run_number }}"
-          echo "::set-env name=RELEASE_NAME::Build ${{ github.run_number }}"
-          echo "::set-env name=RELEASE_BODY::Commit ${{ github.sha }} ${{ github.event.commits[0].message }}"
+          echo "RELEASE_TAG=${RELEASE_TAG}" >> $GITHUB_ENV
+          echo "RELEASE_NAME=${RELEASE_NAME}" >> $GITHUB_ENV
+          echo "RELEASE_BODY=${RELEASE_BODY}" >> $GITHUB_ENV
 
       - name: Output Release URL File
         id: release_url
@@ -86,7 +90,6 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: release_url
-          path: release_url
 
       - name: Get Release File Name & Upload URL
         id: get_release_info
