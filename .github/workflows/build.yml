@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - '**'
-
 jobs:
   build:
     runs-on: ${{ matrix.os }}
@@ -37,15 +36,13 @@ jobs:
           pyinstaller --onefile main.py
 
           # Iterate over all .py files in the 'src' directory and compile them
-          for file in src/*.py; do
-            pyinstaller --onefile "$file"
-          done
+          python -c "import glob, os; [os.system(f'pyinstaller --onefile {filename}') for filename in glob.glob('src/*.py')]"
 
           # Move the executables to a separate directory
           mkdir -p dist
-          mv dist/*.exe dist/windows/
-          mv dist/*.out dist/linux/
-          mv dist/*.app dist/macos/
+          mv dist/*.exe dist/windows/ || true
+          mv dist/*.out dist/linux/ || true
+          mv dist/*.app dist/macos/ || true
 
       - name: Create draft release
         uses: softprops/action-gh-release@v1
