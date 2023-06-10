@@ -1,50 +1,32 @@
 name: build
+
 on: push
 
 jobs:
-  get-next-release-number:
-    name: Get Next Release Number
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check Previous Releases
-        id: check_releases
-        uses: actions/github-script@v4
-        with:
-          script: |
-            const response = await github.repos.listReleases({
-              owner: context.repo.owner,
-              repo: context.repo.repo
-            });
-
-            const releases = response.data;
-            const releaseNames = releases.map((release) => release.name);
-            const numericalNames = releaseNames
-              .filter((name) => /^[0-9]+$/.test(name))
-              .map((name) => parseInt(name, 10));
-
-            const nextReleaseNumber = numericalNames.length === 0
-              ? 1
-              : Math.max(...numericalNames) + 1;
-
-            console.log(`::set-output name=next_release_number::${nextReleaseNumber}`);
-          token: ${{ secrets.GITHUB_TOKEN }}
-
   createrelease:
     name: Create Release
-    needs: get-next-release-number
-    runs-on: ubuntu-latest
+    runs-on: [ubuntu-latest]
     steps:
       - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: startsWith(github.ref, 'refs/tags/')
         with:
-          tag_name: v${{ needs.get-next-release-number.outputs.next_release_number }}
-          files: |
-            dist/*
+          files: release_url.txt
+          body: |
+            Commit ${{ github.sha }}
+            ${{ github.event.commits[0].message }}
           draft: true
           prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Output Release URL File
+        run: echo "${{ steps.create_release.outputs.url }}" > release_url.txt
+      - name: Save Release URL File for publish
+        uses: actions/upload-artifact@v1
+        with:
+          name: release_url
+          path: release_url.txt
 
   build:
     name: Build packages
@@ -70,9 +52,9 @@ jobs:
             OUT_FILE_NAME: Image2MCBlock-linux
             ASSET_MIME: application/octet-stream
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v1
       - name: Set up Python 3.10
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
         with:
           python-version: '3.10'
       - name: Install dependencies
@@ -81,14 +63,22 @@ jobs:
           python -m pip install -r requirements.txt
       - name: Install pyinstaller
         run: python -m pip install pyinstaller
-      - name: Build package
-        run: |
-          ${{ matrix.CMD_BUILD }}
-          mv dist/${{ matrix.OUT_FILE_NAME }} dist/Image2MCBlock
-      - name: Upload package
-        uses: actions/upload-release-asset@v1
+      - name: Build with pyinstaller for ${{ matrix.TARGET }}
+        run: ${{ matrix.CMD_BUILD }}
+      - name: Load Release URL File from release job
+        uses: actions/download-artifact@v1
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/Image2MCBlock
-          asset_name: Image2MCBlock-${{ matrix.TARGET }}
-          asset_content_type: ${{ matrix.ASSET_MIME }}
+          name: release_url
+      - name: Get Release URL
+        id: get_release_info
+        run: |
+          value=`cat release_url/release_url.txt`
+          echo ::set-output name=url::$value
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/${{ matrix.OUT_FILE_NAME }}
+          name: ${{ matrix.OUT_FILE_NAME }}
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
