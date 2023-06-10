@@ -39,6 +39,7 @@ jobs:
         else
           pyinstaller --onefile --add-data "*.png:." --add-data "*.txt:." --hidden-import pkg_resources.py2_warn --name "Image2MCBlock-${{ matrix.platform }}" --additional-hooks-dir=. main.py
         fi
+      shell: ${{ matrix.platform == 'windows' && 'pwsh' || 'bash' }}
 
     - name: Upload artifact
       uses: actions/upload-artifact@v2
