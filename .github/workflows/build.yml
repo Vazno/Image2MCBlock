@@ -1,4 +1,4 @@
-name: build
+name: Release
 
 on:
   push:
@@ -6,83 +6,65 @@ on:
       - '*'
 
 jobs:
-  createrelease:
-    name: Create Release
-    runs-on: [ubuntu-latest]
-    steps:
-      - uses: actions/checkout@v2
-      - name: Create Release
-        id: create_release
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          body: |
-            Commit ${{ github.sha }}
-            ${{ github.event.commits[0].message }}
-          draft: true
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Output Release URL File
-        run: echo "${{ steps.create_release.outputs.url }}" > release_url.txt
-      - name: Save Release URL File for publish
-        uses: actions/upload-artifact@v2
-        with:
-          name: release_url
-          path: release_url.txt
-
   build:
-    name: Build packages
-    needs: createrelease
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
         include:
-          - os: macos-latest
-            TARGET: macos
-            CMD_BUILD: pyinstaller --onefile --add-data "*.png:." --add-data "*.txt:." --hidden-import pkg_resources.py2_warn --name Image2MCBlock-macos --additional-hooks-dir=. main.py
-            OUT_FILE_NAME: Image2MCBlock-macos
-            ASSET_MIME: application/octet-stream
-          - os: windows-latest
-            TARGET: windows
-            CMD_BUILD: pyinstaller --onefile --add-data "*.png;." --add-data "*.txt;." --hidden-import pkg_resources.py2_warn --name Image2MCBlock-windows --additional-hooks-dir=. main.py
-
-            OUT_FILE_NAME: Image2MCBlock-windows.exe
-            ASSET_MIME: application/vnd.microsoft.portable-executable
           - os: ubuntu-latest
-            TARGET: x86_64-linux-gnu
-            CMD_BUILD: pyinstaller --onefile --add-data "*.png:." --add-data "*.txt:." --hidden-import pkg_resources.py2_warn --name Image2MCBlock-linux --additional-hooks-dir=. main.py
-            OUT_FILE_NAME: Image2MCBlock-linux
-            ASSET_MIME: application/octet-stream
+            platform: linux
+          - os: windows-latest
+            platform: windows
+          - os: macos-latest
+            platform: mac-os
     steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.10'
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
-      - name: Install pyinstaller
-        run: python -m pip install pyinstaller
-      - name: Build with pyinstaller for ${{ matrix.TARGET }}
-        run: ${{ matrix.CMD_BUILD }}
-      - name: Load Release URL File from release job
-        uses: actions/download-artifact@v2
-        with:
-          name: release_url
-      - name: Get Release URL
-        id: get_release_info
-        run: |
-          value=`cat release_url/release_url.txt`
-          echo ::set-output name=url::$value
-      - name: Upload Release Asset
-        uses: softprops/action-gh-release@v1
-        with:
-          files: dist/${{ matrix.OUT_FILE_NAME }}
-          name: ${{ matrix.OUT_FILE_NAME }}
-          prerelease: false
-          url: ${{ steps.get_release_info.outputs.url }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller
+
+    - name: Build executable
+      run: |
+        if [ "${{ matrix.platform }}" = "windows" ]; then
+          pyinstaller --onefile --add-data "*.png;." --add-data "*.txt;." --hidden-import pkg_resources.py2_warn --name Image2MCBlock-windows --additional-hooks-dir=. main.py
+        else
+          pyinstaller --onefile --add-data "*.png:." --add-data "*.txt:." --hidden-import pkg_resources.py2_warn --name "Image2MCBlock-${{ matrix.platform }}" --additional-hooks-dir=. main.py
+        fi
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: Image2MCBlock-${{ matrix.platform }}
+        path: dist/Image2MCBlock-${{ matrix.platform }}*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download artifacts
+      uses: actions/download-artifact@v2
+      with:
+        path: artifacts
+
+    - name: Prepare artifacts
+      run: |
+        mkdir release
+        mv artifacts/Image2MCBlock-linux/Image2MCBlock-linux release/Image2MCBlock-linux
+        mv artifacts/Image2MCBlock-windows/Image2MCBlock-windows.exe release/Image2MCBlock-windows.exe
+        mv artifacts/Image2MCBlock-mac-os/Image2MCBlock-mac-os release/Image2MCBlock-mac-os
+
+    - name: Create release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: 'release/*'
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
