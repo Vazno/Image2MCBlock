@@ -8,7 +8,7 @@ from src.utils import resource_path
 def main():
 	parser = argparse.ArgumentParser(description='Launch class arguments')
 	
-	parser.add_argument('-gui', action='store_true')
+	parser.add_argument('-gui', action='store_true', help="Should the GUI be used?")
 
 	# Add the required arguments
 	parser.add_argument('--path_to_file', required='-gui' not in sys.argv, type=str, help='Path to the input file')
