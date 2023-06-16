@@ -1,4 +1,5 @@
 import json
+import os
 
 import tkinter
 import tkinter.messagebox
@@ -15,6 +16,8 @@ class GUI(customtkinter.CTk):
 
         self.theme_mode = customtkinter.get_appearance_mode()
         self.title_color = ["gray75", "gray30"] #LightMode, DarkMode
+
+        self.validatenum = (self.register(self.validate_number), "%P")
 
         # Import block filters
 
@@ -67,7 +70,7 @@ class GUI(customtkinter.CTk):
         self.algorithm_method = customtkinter.CTkOptionMenu(self.settings_frame, values=["abs_diff", "euclidean"])
         self.algorithm_method.grid(row=1, column=0, padx=(10, 5), pady=(10, 0), sticky="new")
 
-        self.scale_factor = customtkinter.CTkEntry(self.settings_frame, placeholder_text="Scale Factor") # MAKE THIS SANITIZED, INTEGER INPUT
+        self.scale_factor = customtkinter.CTkEntry(self.settings_frame, placeholder_text="Scale Factor (number)", validate="all", validatecommand=self.validatenum) # MAKE THIS SANITIZED, INTEGER INPUT
         self.scale_factor.grid(row=1, column=1, padx=(0, 10), pady=(10, 10), sticky="new")
 
         ########################
@@ -105,9 +108,6 @@ class GUI(customtkinter.CTk):
         self.filtering_frame_title = customtkinter.CTkLabel(self.filtering_frame, text="Filtering", fg_color=self.title_color, corner_radius=2)
         self.filtering_frame_title.grid(row=0, column=0, columnspan=4, padx=0, pady=0, sticky="new")
 
-        #self.filtering_search = customtkinter.CTkEntry(self.filtering_frame, placeholder_text="Filter Search")
-        #self.filtering_search.grid(row=1, column=0, columnspan=2, padx=(10, 5), pady=(10, 10), sticky="new")
-
         self.filter_list = tkinter.Listbox(self.filtering_frame, relief="solid", borderwidth="0", highlightthickness="0", 
                                             bg="#333333" if self.theme_mode == "Dark" else "#EBEBEB", fg="#ffffff" if self.theme_mode == "Dark" else "#000000", 
                                             selectmode=tkinter.MULTIPLE, activestyle="none")
@@ -133,17 +133,49 @@ class GUI(customtkinter.CTk):
         inputmodify.delete(0, tkinter.END)
         inputmodify.insert(0, filename)
 
+    def validate_number(self, input):
+        if str.isdigit(input) or input == "":
+            return True
+
+        return False
+
     def submit(self):
         input_file = self.input_file.get()
-        output_file = self.output_file.get()
-        scale_factor = int(self.scale_factor.get())
+        output_file = self.output_file.get().replace("\\", "/").split("/") if self.output_file.get() != "" else ""
         method = self.algorithm_method.get()
+        scale_factor = int(self.scale_factor.get()) if self.scale_factor.get() != "" else 0
         png_atlas_filename = self.atlaspng_input_file.get()
         txt_atlas_filename = self.atlastxt_input_file.get()
+        filters = [self.filter_list.get(idx) for idx in self.filter_list.curselection()] if len(self.filter_list.curselection()) > 0 else None
 
-        launch = Launch("",
-            scale_factor,
-            method,
-            png_atlas_filename,
-            txt_atlas_filename)
-        launch.convert(input_file, output_file)
+        if input_file == "" or not os.path.isfile(input_file):
+            tkinter.messagebox.showerror("Error", "You have supplied an invalid input file.")
+
+            return
+        
+        if output_file == "" or not os.path.isdir("/".join(output_file[0:len(output_file) - 1])):
+            tkinter.messagebox.showerror("Error", "You have supplied an invalid output file!")
+
+            return
+
+        if png_atlas_filename == "" or not os.path.isfile(png_atlas_filename):
+            tkinter.messagebox.showerror("Error", "You have supplied an invalid PNG Atlas file.")
+
+            return
+
+        if txt_atlas_filename == "" or not os.path.isfile(txt_atlas_filename):
+            tkinter.messagebox.showerror("Error", "You have supplied an invalid TXT Atlas file.")
+
+            return
+
+        try:
+            launch = Launch("",
+                scale_factor,
+                method,
+                png_atlas_filename,
+                txt_atlas_filename)
+            launch.convert(input_file, "/".join(output_file))
+
+            tkinter.messagebox.showinfo("Success", "Finished!")
+        except:
+            tkinter.messagebox.showerror("Error", "There was an error processing the image.")
