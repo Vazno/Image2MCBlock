@@ -29,7 +29,7 @@ class GUI(customtkinter.CTk):
         # Window Title and Settings
 
         self.title("Image2MCBlock")
-        self.resizable(True, True)
+        self.resizable(True, False)
         self.geometry("600x386")
         self.grid_columnconfigure(0, weight=1)
 
