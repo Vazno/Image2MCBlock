@@ -3,3 +3,4 @@ pillow
 requests
 moviepy
 numpy
+mcschematic
