@@ -7,6 +7,7 @@ from typing import List, Tuple, Literal
 
 import moviepy.editor as mp
 from PIL import Image, ImageStat
+from tqdm import tqdm
 
 from src import calculate_minecraft_blocks_median
 from src import crop_image
@@ -50,12 +51,18 @@ class Launch:
 			scale_factor: int = 0,
 		    method: Literal["abs_diff", "euclidean"] = "euclidean",
 			png_atlas_filename: str=resource_path("minecraft_textures_atlas_blocks.png_0.png"),
-			txt_atlas_filename:str=resource_path("minecraft_textures_atlas_blocks.png.txt")) -> None:
+			txt_atlas_filename: str=resource_path("minecraft_textures_atlas_blocks.png.txt")) -> None:
 
 		self.PNG_ATLAS_FILENAME = png_atlas_filename
 		self.TXT_ATLAS_FILENAME = txt_atlas_filename
-		self.CACHE_FILENAME = "blocks.json"
+		self.CACHE_FILENAME = os.path.join(get_execution_folder(), "blocks.json")
 		self.method = method
+
+		if self.method == "euclidean":
+			self.method = self.find_closest_block_euclidean_distance
+		elif self.method == "abs_diff":
+			self.method = self.find_closest_block_rgb_abs_diff
+
 		self.scale_factor = scale_factor
 		self.blocks_image = Image.open(self.PNG_ATLAS_FILENAME, "r")
 		self.caching = dict()
@@ -74,8 +81,8 @@ class Launch:
 	def _get_blocks_cached(self) -> List[Tuple[str, int, int, Tuple[int, int, int]]]:
 		'''Gets the blocks from cache, and if it doesn't exist, re-validate everything from internet,
 		and cache blocks and their medians.'''
-		if pathlib.Path(os.path.join(get_execution_folder(), self.CACHE_FILENAME)).exists():
-			with open(os.path.join(get_execution_folder(), self.CACHE_FILENAME), "r") as f:
+		if pathlib.Path(self.CACHE_FILENAME).exists():
+			with open(self.CACHE_FILENAME, "r") as f:
 				blocks = json.load(f)
 		else:
 			valid_client = download.ValidBlocksClient(self.TXT_ATLAS_FILENAME)
@@ -84,7 +91,7 @@ class Launch:
 			calculate_median = calculate_minecraft_blocks_median.CalculateMinecraftBlocksMedian(blocks, self.PNG_ATLAS_FILENAME)
 			blocks = calculate_median.get_blocks_with_rgb_medians()
 
-			with open(os.path.join(get_execution_folder(), self.CACHE_FILENAME), "w") as f:
+			with open(self.CACHE_FILENAME, "w") as f:
 				json.dump(blocks, f, indent=4)
 		return blocks
 
@@ -145,17 +152,17 @@ class Launch:
 			self.caching.update(all_permutations)
 			return closest_block
 
-	def convert(self, path: str, output_path: str) -> None:
+	def convert(self, path: str, output_path: str, show_progress: bool = True) -> None:
 		if is_video_file(path):
 			video = mp.VideoFileClip(path)
 			converted_video = convert_video.process_video_with_pil(video, self.create_new_image)
-			converted_video.write_videofile(output_path, fps=video.fps)
+			converted_video.write_videofile(output_path, fps=video.fps, progressbar=show_progress)
 		else:
 			with Image.open(path, "r") as img:
-				converted_image = self.create_new_image(img)
+				converted_image = self.create_new_image(img, show_progress=show_progress)
 				converted_image.save(output_path)
 
-	def create_new_image(self, image: Image) -> Image:
+	def create_new_image(self, image: Image, show_progress: bool = False) -> Image:
 		image_cropper = crop_image.CropImage(image)
 		cropped_old_image = image_cropper.crop_to_make_divisible()
 
@@ -166,6 +173,10 @@ class Launch:
 		chunks_x = width // 16
 		chunks_y = height // 16
 
+		total_iterations = chunks_x*chunks_y
+		# Create a progress bar
+		progress_bar = tqdm(total=total_iterations, disable=not show_progress)
+
 		for x in range(chunks_x):
 			for y in range(chunks_y):
 				left = x * 16
@@ -174,11 +185,11 @@ class Launch:
 				lower = upper + 16
 				chunk = cropped_old_image.crop((left, upper, right, lower))
 
-				if self.method == "euclidean":
-					lowest_block = self.find_closest_block_euclidean_distance(chunk)
-				elif self.method == "abs_diff":
-					lowest_block = self.find_closest_block_rgb_abs_diff(chunk)
+				lowest_block = self.method(chunk)
 
 				cropped_old_image.paste(self.blocks_image.crop([lowest_block[1], lowest_block[2], lowest_block[1]+16, lowest_block[2]+16]), [left,upper,right,lower])
+				progress_bar.update(1)
 
+		# Close the progress bar
+		progress_bar.close()
 		return cropped_old_image
