@@ -3,4 +3,5 @@ pillow
 requests
 moviepy
 numpy
+customtkinter
 mcschematic
