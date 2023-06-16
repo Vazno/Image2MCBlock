@@ -15,6 +15,7 @@ from src import download
 from src import resize
 from src import convert_video
 from src.utils import is_video_file, resource_path, get_execution_folder
+from src import generate_schematic
 
 def generate_color_variations(color_dict, max_abs_difference):
 	new_dict = {}
@@ -153,7 +154,11 @@ class Launch:
 			return closest_block
 
 	def convert(self, path: str, output_path: str, show_progress: bool = True) -> None:
-		if is_video_file(path):
+		if output_path.endswith(".schem"):
+			with Image.open(path, "r") as img:
+				self.get_blocks_list(img, output_path=output_path, show_progress=show_progress)
+
+		elif is_video_file(path):
 			video = mp.VideoFileClip(path)
 			converted_video = convert_video.process_video_with_pil(video, self.create_new_image)
 			converted_video.write_videofile(output_path, fps=video.fps, progressbar=show_progress)
@@ -161,6 +166,41 @@ class Launch:
 			with Image.open(path, "r") as img:
 				converted_image = self.create_new_image(img, show_progress=show_progress)
 				converted_image.save(output_path)
+
+	def get_blocks_list(self, image: Image, output_path: str, show_progress: bool = False) -> List[List[str]]:
+		image_cropper = crop_image.CropImage(image)
+		cropped_old_image = image_cropper.crop_to_make_divisible()
+
+		if self.scale_factor > 0 or self.scale_factor < 0:
+			cropped_old_image = resize.resize_image(cropped_old_image, self.scale_factor)
+
+		width, height = cropped_old_image.size
+		chunks_x = width // 16
+		chunks_y = height // 16
+
+		total_iterations = chunks_x*chunks_y
+		# Create a progress bar
+		progress_bar = tqdm(total=total_iterations, disable=not show_progress)
+
+
+		blocks_matrix = list()
+		for x in range(chunks_x):
+			blocks_matrix.append(list())
+			for y in range(chunks_y):
+				left = x * 16
+				upper = y * 16
+				right = left + 16
+				lower = upper + 16
+				chunk = cropped_old_image.crop((left, upper, right, lower))
+
+				lowest_block = self.method(chunk)
+				blocks_matrix[-1].append(lowest_block[0])
+
+				progress_bar.update(1)
+
+		# Close the progress bar
+		progress_bar.close()
+		generate_schematic.create_2d_schematic(blocks_matrix, output_path)
 
 	def create_new_image(self, image: Image, show_progress: bool = False) -> Image:
 		image_cropper = crop_image.CropImage(image)
