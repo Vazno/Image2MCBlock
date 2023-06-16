@@ -122,16 +122,19 @@ class GUI(customtkinter.CTk):
         self.submit_button.grid(row=4, column=0, padx=10, pady=10, sticky="ew")
 
     def browseFiles(self, title, inputmodify):
-        filename = tkinter.filedialog.askopenfilename(initialdir = "./", title = title)
+        filename = tkinter.filedialog.askopenfilename(initialdir = "./", title=title)
 
         inputmodify.delete(0, tkinter.END)
         inputmodify.insert(0, filename)
 
     def saveFiles(self, title, inputmodify):
-        filename = tkinter.filedialog.asksaveasfilename(initialdir = "./", title = title)
+        filename = tkinter.filedialog.asksaveasfilename(initialdir = "./", title=title)
 
         inputmodify.delete(0, tkinter.END)
         inputmodify.insert(0, filename)
+
+        with open(filename, "w") as f:
+            f.write("")
 
     def validate_number(self, input):
         if str.isdigit(input) or input == "":
@@ -141,7 +144,7 @@ class GUI(customtkinter.CTk):
 
     def submit(self):
         input_file = self.input_file.get()
-        output_file = self.output_file.get().replace("\\", "/").split("/") if self.output_file.get() != "" else ""
+        output_file = self.output_file.get()
         method = self.algorithm_method.get()
         scale_factor = int(self.scale_factor.get()) if self.scale_factor.get() != "" else 0
         png_atlas_filename = self.atlaspng_input_file.get()
@@ -153,7 +156,7 @@ class GUI(customtkinter.CTk):
 
             return
         
-        if output_file == "" or not os.path.isdir("/".join(output_file[0:len(output_file) - 1])):
+        if output_file == "" or not os.path.isfile(output_file):
             tkinter.messagebox.showerror("Error", "You have supplied an invalid output file!")
 
             return
@@ -169,12 +172,12 @@ class GUI(customtkinter.CTk):
             return
 
         try:
-            launch = Launch("",
+            launch = Launch(filters,
                 scale_factor,
                 method,
                 png_atlas_filename,
                 txt_atlas_filename)
-            launch.convert(input_file, "/".join(output_file))
+            launch.convert(input_file, output_file)
 
             tkinter.messagebox.showinfo("Success", "Finished!")
         except:
