@@ -11,10 +11,12 @@ To install Image2MCBlock, download repo, and simply use pip:
 
 ## How to run:
 ```
-usage: main.py [-h] [--filter FILTER [FILTER ...]] [--scale_factor SCALE_FACTOR]
+usage: main.py [-h] [--filter FILTER [FILTER ...]]
+               [--scale_factor SCALE_FACTOR]
+               [--compression_level COMPRESSION_LEVEL]    
                [--method {abs_diff,euclidean}]
-               [--png_atlas_filename PNG_ATLAS_FILENAME]
-               [--txt_atlas_filename TXT_ATLAS_FILENAME]
+               [--png_atlas_filename PNG_ATLAS_FILENAME]  
+               [--txt_atlas_filename TXT_ATLAS_FILENAME]  
                path_to_file output_file
 
 Launch class arguments
@@ -24,13 +26,21 @@ positional arguments:
   output_file           Path to the output file
 
 options:
-  -h, --help            show this help message and exit
+  -h, --help            show this help message and exit   
   --filter FILTER [FILTER ...]
                         Filter options
   --scale_factor SCALE_FACTOR
                         Scale factor
+  --compression_level COMPRESSION_LEVEL
+                        Compression level, greatly        
+                        improves conversion speed, and    
+                        loses some information along the  
+                        way, do not go higher than 20,    
+                        as it will cause very high        
+                        memory consumption.
   --method {abs_diff,euclidean}
-                        Method of finding the closest color to block
+                        Method of finding the closest     
+                        color to block
   --png_atlas_filename PNG_ATLAS_FILENAME
                         PNG atlas filename
   --txt_atlas_filename TXT_ATLAS_FILENAME

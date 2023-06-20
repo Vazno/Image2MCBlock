@@ -1,6 +1,5 @@
 import sys
 import os
-import pathlib
 import mimetypes
 
 from PIL import Image

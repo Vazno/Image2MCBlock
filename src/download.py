@@ -1,5 +1,5 @@
 import re
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 import requests
 
 from .utils import resource_path
@@ -21,31 +21,32 @@ class ValidBlocksClient:
 			if line == self.NBTDOC_END:
 				start = False
 			if start:
-				valid_blocks.append(line.removeprefix("\t").removesuffix(","))
+				valid_blocks.append(line.removeprefix("\tminecraft:").removesuffix(","))
 			if line == self.NBTDOC_START:
 				start = True
 		return valid_blocks
 
-	def _get_valid_blocks_list_from_atlas(self) -> List[Tuple[str, int, int]]:
+	def _get_valid_blocks_list_from_atlas(self) -> Dict:
 		'''Parses txt atlas file, and returns list of blocks.'''
 		blocks = list()
-		changed_blocks = list()
+		changed_blocks = dict()
 		with open(resource_path(self.TXT_ATLAS_FILENAME), "r") as atlas_fp:
 			blocks = re.findall(self.BLOCK_INFO_PLACE_PATTERN, atlas_fp.read())
 			for name, x, y in blocks:
-				changed_blocks.append([name, int(x), int(y)])
+				changed_blocks.update({name: {"x": int(x), "y": int(y)}})
 		return changed_blocks
 
-	def exclude_invalid_blocks(self) -> List[Tuple[str, int, int]]:
+	def exclude_invalid_blocks(self) -> Dict:
 		'''Gets block list from get_valid_blocks_list_from_atlas function
 		and from get_valid_blocks_list_from_response, then excludes everything that's not in the
 		list from get_valid_blocks_list_from_response'''
-		valid = list()
+		valid = dict()
 
-		for block in self._get_valid_blocks_list_from_atlas():
-			for valid_block in self._get_valid_blocks_list_from_response():
-				if block[0] in valid_block:
-					valid.append(block)
-					break
+		response_blocks = self._get_valid_blocks_list_from_response()
+		atlas_blocks: Dict = self._get_valid_blocks_list_from_atlas()
+		for valid_block in response_blocks:
+			try:
+				valid.update({valid_block: atlas_blocks[valid_block]})
+			except KeyError:
+				pass
 		return valid
-
