@@ -1,5 +1,6 @@
 import os
 from enum import Enum
+from typing import List
 
 import mcschematic
 
@@ -497,16 +498,16 @@ class Version(Enum):
 	JE_15W32B = 103
 	JE_15W32A = 100
 
-def create_2d_schematic(blocks, output_path):
+def create_2d_schematic(blocks: List[List[str]], output_path: str, bottom_block="end_stone"):
 	width = len(blocks[0])
 	height = len(blocks)
 	mcschematic.Version = Version
-	
+
 	schematic = mcschematic.MCSchematic()
 
 	for y in range(height):
 		for x in range(width):
-			schematic.setBlock((x, 0, y), "end_stone")
+			schematic.setBlock((x, 0, y), bottom_block)
 
 	for y in range(height):
 		for x in range(width):

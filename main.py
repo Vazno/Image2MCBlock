@@ -6,7 +6,7 @@ from typing import List, Literal, Dict
 
 import argparse
 import moviepy.editor as mp
-from PIL import Image, ImageStat
+from PIL import Image
 from tqdm import tqdm
 
 from src import calculate_minecraft_blocks_median
@@ -16,41 +16,13 @@ from src import resize
 from src import convert_video
 from src.utils import is_video_file, resource_path, get_execution_folder
 from src import generate_schematic
+from src import find_closest
 
-def generate_color_variations(color_dict, max_abs_difference=16):
-	new_dict = {}
-	
-	for rgb_tuple, value in color_dict.items():
-		r, g, b = rgb_tuple
-		
-		for dr in range(-max_abs_difference, max_abs_difference + 1):
-			new_r = r + dr
-			
-			if not 0 <= new_r <= 255:
-				continue
-			
-			for dg in range(-max_abs_difference, max_abs_difference + 1):
-				new_g = g + dg
-				
-				if not 0 <= new_g <= 255:
-					continue
-				
-				for db in range(-max_abs_difference, max_abs_difference + 1):
-					new_b = b + db
-					
-					if 0 <= new_b <= 255:
-						total_diff = abs(new_r - r) + abs(new_g - g) + abs(new_b - b)
-						
-						if total_diff <= max_abs_difference:
-							new_rgb_tuple = (new_r, new_g, new_b)
-							new_dict[new_rgb_tuple] = value
-	
-	return new_dict
 
 class Launch:
 	def __init__(self, filter: List[str] = None,
 			scale_factor: int = 0,
-		    method: Literal["abs_diff", "euclidean"] = "euclidean",
+		    method: Literal["abs_diff", "euclidean", "chebyshev_distance", "manhattan_distance", "cosine_similarity", "hamming_distance", "canberra_distance"] = "canberra_distance",
 		    compression_level: int = 16,
 			png_atlas_filename: str=resource_path("minecraft_textures_atlas_blocks.png_0.png"),
 			txt_atlas_filename: str=resource_path("minecraft_textures_atlas_blocks.png.txt")) -> None:
@@ -60,16 +32,10 @@ class Launch:
 		self.CACHE_FILENAME = os.path.join(get_execution_folder(), "blocks.json")
 		self.method = method
 
-		if self.method == "euclidean":
-			self.method = self.find_closest_block_euclidean_distance
-		elif self.method == "abs_diff":
-			self.method = self.find_closest_block_rgb_abs_diff
-
 		self.scale_factor = scale_factor
-		self.compression_level = compression_level
 
 		self.blocks_image = Image.open(self.PNG_ATLAS_FILENAME, "r")
-		self.caching = dict()
+		
 
 		blocks = self._get_blocks_from_cache()
 
@@ -81,6 +47,23 @@ class Launch:
 			blocks = filtered_blocks
 
 		self.blocks = blocks
+
+
+		method_settings = find_closest.Method(self.blocks, compression_level=compression_level)
+		if self.method == "euclidean":
+			self.method = method_settings.find_closest_block_euclidean_distance
+		elif self.method == "abs_diff":
+			self.method = method_settings.find_closest_block_rgb_abs_diff
+		elif self.method == "chebyshev_distance":
+			self.method = method_settings.find_closest_block_chebyshev_distance
+		elif self.method == "manhattan_distance":
+			self.method = method_settings.find_closest_block_manhattan_distance
+		elif self.method == "cosine_similarity":
+			self.method = method_settings.find_closest_block_cosine_similarity
+		elif self.method == "hamming_distance":
+			self.method = method_settings.find_closest_block_hamming_distance
+		elif self.method == "canberra_distance":
+			self.method = method_settings.find_closest_block_canberra_distance
 
 	def _get_blocks_from_cache(self) -> Dict:
 		'''Gets the blocks from cache, and if it doesn't exist, re-validate everything from internet,
@@ -98,72 +81,7 @@ class Launch:
 				json.dump(blocks, f, indent=4)
 		return blocks
 
-	def find_closest_block_rgb_abs_diff(self, chunk: Image) -> str:
-		'''Calculates the median value of an input image.
-		Then compares this median to the medians for each block,
-		and returns the block with the closest match based on the sum of absolute differences between its RGB values and the median of the input image.
-		If there are multiple blocks with equal minimum difference, it will return the first one encountered.
-		'''
-		og_median = tuple(ImageStat.Stat(chunk).median)
-		og_median_rgb = tuple([og_median[0], og_median[1], og_median[2]])
-		if og_median_rgb in self.caching:
-			return self.caching[og_median_rgb]
-		else:
-			rgb_closests_diff = []
-			for channel in range(3):
-				min_diff = float('inf')
-				for block in self.blocks:
-					diff = abs(og_median_rgb[channel] - self.blocks[block]["median"][channel])
-					if diff < min_diff:
-						min_diff = diff
-						min_diff_block = block
-				rgb_closests_diff.append(min_diff_block)
-			
-			lowest_difference = float("inf")
-			lowest_block = None
-			for block in rgb_closests_diff:
-				difference = sum(abs(a - b) for a, b in zip(self.blocks[block]["median"], og_median_rgb))
-				if difference < lowest_difference:
-					lowest_difference = difference
-					lowest_block = block
-			
-			self.caching[og_median_rgb] = lowest_block
-			new_dict = dict()
-			new_dict[og_median_rgb] = lowest_block
-			all_permutations = generate_color_variations(new_dict, self.compression_level)
-			self.caching.update(all_permutations)
-			return lowest_block
 
-	def find_closest_block_euclidean_distance(self, chunk: Image) -> str:
-		# Calculate the median RGB values of the input image
-		og_median = ImageStat.Stat(chunk).median
-		og_median_rgb = tuple([og_median[0], og_median[1], og_median[2]])
-
-		# Checking if the median is in caching
-		if og_median_rgb in self.caching:
-			return self.caching[og_median_rgb]
-
-		else:
-			# Initialize variables for tracking the closest block
-			closest_block = None
-			min_distance = math.inf
-
-			# Iterate over each block and calculate the Euclidean distance
-			for block in self.blocks:
-				block_rgb = self.blocks[block]["median"]
-				distance = math.sqrt(sum((a - b) ** 2 for a, b in zip(og_median, block_rgb)))
-
-				# Update closest block if a closer match is found
-				if distance < min_distance:
-					min_distance = distance
-					closest_block = block
-
-			self.caching[og_median_rgb] = closest_block
-			new_dict = dict()
-			new_dict[og_median_rgb] = closest_block
-			all_permutations = generate_color_variations(new_dict, self.compression_level)
-			self.caching.update(all_permutations)
-			return closest_block
 
 	def convert(self, path: str, output_path: str, show_progress: bool = True) -> None:
 		if output_path.endswith(".schem"):
@@ -257,7 +175,8 @@ def main():
 	parser.add_argument('--filter', nargs='+', help='Filter options')
 	parser.add_argument('--scale_factor', type=int, help='Scale factor', default=0)
 	parser.add_argument('--compression_level', type=int, help='Compression level, greatly improves conversion speed, and loses some information along the way, do not go higher than 20, as it will cause very high memory consumption.', default=16)
-	parser.add_argument('--method', type=str, choices=["abs_diff", "euclidean"], help='Method of finding the closest color to block', default="euclidean", required=False)
+	parser.add_argument('--method', type=str,
+		    choices=["abs_diff", "euclidean", "chebyshev_distance", "manhattan_distance", "cosine_similarity", "hamming_distance", "canberra_distance"], help='Method of finding the closest color to block', default="canberra_distance", required=False)
 	parser.add_argument('--png_atlas_filename', type=str, default=resource_path('minecraft_textures_atlas_blocks.png_0.png'), help='PNG atlas filename')
 	parser.add_argument('--txt_atlas_filename', type=str, default=resource_path('minecraft_textures_atlas_blocks.png.txt'), help='TXT atlas filename')
 
