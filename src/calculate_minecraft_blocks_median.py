@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import Dict
 
 from PIL import Image, ImageStat
 

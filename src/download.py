@@ -1,5 +1,5 @@
 import re
-from typing import List, Tuple, Dict
+from typing import List, Dict
 import requests
 
 from .utils import resource_path

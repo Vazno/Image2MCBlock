@@ -1,7 +1,6 @@
 import os
 import json
 import pathlib
-import math
 from typing import List, Literal, Dict
 
 import argparse
@@ -81,19 +80,18 @@ class Launch:
 				json.dump(blocks, f, indent=4)
 		return blocks
 
-
-
 	def convert(self, path: str, output_path: str, show_progress: bool = True) -> None:
-		if output_path.endswith(".schem"):
+		if is_video_file(path):
+			video = mp.VideoFileClip(path)
+			converted_video = convert_video.process_video_with_pil(video, self.convert_image)
+			converted_video.write_videofile(output_path, fps=video.fps, logger=None if not show_progress else "bar")
+
+		elif output_path.endswith(".schem"):
 			with Image.open(path, "r") as img:
 				generate_schematic.create_2d_schematic(
 					self.get_blocks_2d_matirx(img, show_progress=show_progress),
 					output_path)
 
-		elif is_video_file(path):
-			video = mp.VideoFileClip(path)
-			converted_video = convert_video.process_video_with_pil(video, self.convert_image)
-			converted_video.write_videofile(output_path, fps=video.fps, logger=None if not show_progress else "bar")
 		else:
 			with Image.open(path, "r") as img:
 				converted_image = self.convert_image(img, show_progress=show_progress)
@@ -102,13 +100,15 @@ class Launch:
 	def preprocess_image(self, image: Image) -> Image:
 		image_cropper = crop_image.CropImage(image)
 		cropped_image = image_cropper.crop_to_make_divisible()
-
+		if cropped_image.mode != 'RGB':
+			cropped_image = cropped_image.convert('RGB')
 		if self.scale_factor > 0 or self.scale_factor < 0:
 			cropped_image = resize.resize_image(cropped_image, self.scale_factor)
 
 		return cropped_image
 
 	def get_blocks_2d_matirx(self, image: Image, show_progress: bool = False) -> List[List[str]]:
+		'''Returns a matrix of strings containing block names.'''
 		preprocessed_image = self.preprocess_image(image)
 		width, height = preprocessed_image.size
 		chunks_x = width // 16
@@ -128,8 +128,8 @@ class Launch:
 				lower = upper + 16
 				chunk = preprocessed_image.crop((left, upper, right, lower))
 
-				lowest_block = self.method(chunk)
-				blocks_matrix[-1].append(lowest_block[0])
+				closest_block = self.method(chunk)
+				blocks_matrix[-1].append(closest_block[0])
 
 				progress_bar.update(1)
 
@@ -138,6 +138,7 @@ class Launch:
 		return blocks_matrix
 
 	def convert_image(self, image: Image, show_progress: bool = False) -> Image:
+		# TODO: Use get_blocks_2d_matirx to not repeat the code
 		preprocessed_image = self.preprocess_image(image)
 
 		width, height = preprocessed_image.size
@@ -156,8 +157,12 @@ class Launch:
 				lower = upper + 16
 				chunk = preprocessed_image.crop((left, upper, right, lower))
 
-				lowest_block = self.method(chunk)
-				preprocessed_image.paste(self.blocks_image.crop([self.blocks[lowest_block]["x"], self.blocks[lowest_block]["y"], self.blocks[lowest_block]["x"]+16, self.blocks[lowest_block]["y"]+16]), [left,upper,right,lower])
+				closest_block = self.method(chunk)
+				preprocessed_image.paste(
+					self.blocks_image.crop([self.blocks[closest_block]["x"],
+					self.blocks[closest_block]["y"], self.blocks[closest_block]["x"]+16,
+					self.blocks[closest_block]["y"]+16]), [left,upper,right,lower]
+					)
 				progress_bar.update(1)
 
 		# Close the progress bar
@@ -174,7 +179,7 @@ def main():
 	# Add the optional arguments
 	parser.add_argument('--filter', nargs='+', help='Filter options')
 	parser.add_argument('--scale_factor', type=int, help='Scale factor', default=0)
-	parser.add_argument('--compression_level', type=int, help='Compression level, greatly improves conversion speed, and loses some information along the way, do not go higher than 20, as it will cause very high memory consumption.', default=16)
+	parser.add_argument('--compression_level', type=int, help='Compression level, greatly improves conversion speed, and loses some information along the way, do not set higher then 20, as it will cause very high memory consumption.', default=16)
 	parser.add_argument('--method', type=str,
 		    choices=["abs_diff", "euclidean", "chebyshev_distance", "manhattan_distance", "cosine_similarity", "hamming_distance", "canberra_distance"], help='Method of finding the closest color to block', default="canberra_distance", required=False)
 	parser.add_argument('--png_atlas_filename', type=str, default=resource_path('minecraft_textures_atlas_blocks.png_0.png'), help='PNG atlas filename')
