@@ -9,11 +9,9 @@ from PIL import Image
 from tqdm import tqdm
 
 from src import calculate_minecraft_blocks_median
-from src import crop_image
 from src import download
-from src import resize
 from src import convert_video
-from src.utils import is_video_file, resource_path, get_execution_folder
+from src.utils import is_video_file, resource_path, get_execution_folder, crop_to_make_divisible, resize_image
 from src import generate_schematic
 from src import find_closest
 
@@ -98,12 +96,11 @@ class Launch:
 				converted_image.save(output_path)
 
 	def preprocess_image(self, image: Image) -> Image:
-		image_cropper = crop_image.CropImage(image)
-		cropped_image = image_cropper.crop_to_make_divisible()
+		cropped_image = crop_to_make_divisible(image)
 		if cropped_image.mode != 'RGB':
 			cropped_image = cropped_image.convert('RGB')
 		if self.scale_factor > 0 or self.scale_factor < 0:
-			cropped_image = resize.resize_image(cropped_image, self.scale_factor)
+			cropped_image = resize_image(cropped_image, self.scale_factor)
 
 		return cropped_image
 
