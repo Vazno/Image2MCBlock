@@ -89,7 +89,7 @@ class Launch:
 		elif output_path.endswith(".schem"):
 			with Image.open(path, "r") as img:
 				generate_schematic.create_2d_schematic(
-					self.get_blocks_2d_matirx(img, show_progress=show_progress),
+					self.get_blocks_2d_matrix(img, show_progress=show_progress),
 					output_path)
 
 		else:
@@ -107,29 +107,29 @@ class Launch:
 
 		return cropped_image
 
-	def get_blocks_2d_matirx(self, image: Image, show_progress: bool = False) -> List[List[str]]:
+	def get_blocks_2d_matrix(self, image: Image, show_progress: bool = False, chunk_size: int = 16) -> List[List[str]]:
 		'''Returns a matrix of strings containing block names.'''
 		preprocessed_image = self.preprocess_image(image)
 		width, height = preprocessed_image.size
-		chunks_x = width // 16
-		chunks_y = height // 16
+		chunks_x = width // chunk_size
+		chunks_y = height // chunk_size
 
-		total_iterations = chunks_x*chunks_y
+		blocks_matrix = [[None] * chunks_y for _ in range(chunks_x)]
+		total_iterations = chunks_x * chunks_y
+
 		# Create a progress bar
 		progress_bar = tqdm(total=total_iterations, disable=not show_progress)
 
-		blocks_matrix = list()
 		for x in range(chunks_x):
-			blocks_matrix.append(list())
 			for y in range(chunks_y):
-				left = x * 16
-				upper = y * 16
-				right = left + 16
-				lower = upper + 16
+				left = x * chunk_size
+				upper = y * chunk_size
+				right = left + chunk_size
+				lower = upper + chunk_size
 				chunk = preprocessed_image.crop((left, upper, right, lower))
 
 				closest_block = self.method(chunk)
-				blocks_matrix[-1].append(closest_block[0])
+				blocks_matrix[x][y] = closest_block
 
 				progress_bar.update(1)
 
@@ -138,36 +138,29 @@ class Launch:
 		return blocks_matrix
 
 	def convert_image(self, image: Image, show_progress: bool = False) -> Image:
-		# TODO: Use get_blocks_2d_matirx to not repeat the code
-		preprocessed_image = self.preprocess_image(image)
+		blocks_matrix = self.get_blocks_2d_matrix(image, show_progress)
+		matrix_width = len(blocks_matrix)
+		matrix_height = len(blocks_matrix[0])
+		new_image = Image.new("RGB", size=(matrix_width * 16, matrix_height * 16))
 
-		width, height = preprocessed_image.size
-		chunks_x = width // 16
-		chunks_y = height // 16
+		total_iterations = matrix_width * matrix_height
 
-		total_iterations = chunks_x * chunks_y
 		# Create a progress bar
 		progress_bar = tqdm(total=total_iterations, disable=not show_progress)
 
-		for x in range(chunks_x):
-			for y in range(chunks_y):
-				left = x * 16
-				upper = y * 16
-				right = left + 16
-				lower = upper + 16
-				chunk = preprocessed_image.crop((left, upper, right, lower))
+		for x, row in enumerate(blocks_matrix):
+			for y, block_name in enumerate(row):
+				block_info = self.blocks.get(block_name)
+				block_x, block_y = block_info["x"], block_info["y"]
+				block_image = self.blocks_image.crop((block_x, block_y, block_x + 16, block_y + 16))
+				new_image.paste(block_image, (x * 16, y * 16))
 
-				closest_block = self.method(chunk)
-				preprocessed_image.paste(
-					self.blocks_image.crop([self.blocks[closest_block]["x"],
-					self.blocks[closest_block]["y"], self.blocks[closest_block]["x"]+16,
-					self.blocks[closest_block]["y"]+16]), [left,upper,right,lower]
-					)
 				progress_bar.update(1)
 
 		# Close the progress bar
 		progress_bar.close()
-		return preprocessed_image
+
+		return new_image
 
 def main():
 	parser = argparse.ArgumentParser(description='Launch class arguments')
@@ -179,7 +172,7 @@ def main():
 	# Add the optional arguments
 	parser.add_argument('--filter', nargs='+', help='Filter options')
 	parser.add_argument('--scale_factor', type=int, help='Scale factor', default=0)
-	parser.add_argument('--compression_level', type=int, help='Compression level, greatly improves conversion speed, and loses some information along the way, do not set higher then 20, as it will cause very high memory consumption.', default=16)
+	parser.add_argument('--compression_level', type=int, help='Compression level, greatly improves conversion speed, and loses some information along the way, do not set higher than 20, as it will cause very high memory consumption.', default=16)
 	parser.add_argument('--method', type=str,
 		    choices=["abs_diff", "euclidean", "chebyshev_distance", "manhattan_distance", "cosine_similarity", "hamming_distance", "canberra_distance"], help='Method of finding the closest color to block', default="canberra_distance", required=False)
 	parser.add_argument('--png_atlas_filename', type=str, default=resource_path('minecraft_textures_atlas_blocks.png_0.png'), help='PNG atlas filename')
