@@ -26,21 +26,16 @@ positional arguments:
   output_file           Path to the output file
 
 options:
-  -h, --help            show this help message and exit   
+  -h, --help            show this help message and exit
   --filter FILTER [FILTER ...]
                         Filter options
   --scale_factor SCALE_FACTOR
                         Scale factor
   --compression_level COMPRESSION_LEVEL
-                        Compression level, greatly        
-                        improves conversion speed, and    
-                        loses some information along the  
-                        way, do not go higher than 20,    
-                        as it will cause very high        
-                        memory consumption.
-  --method {abs_diff,euclidean}
-                        Method of finding the closest     
-                        color to block
+                        Compression level, greatly improves conversion speed, and loses some information along the way, do not set higher than 20, as it will   
+                        cause very high memory consumption.
+  --method {abs_diff,euclidean,chebyshev_distance,manhattan_distance,cosine_similarity,hamming_distance,canberra_distance}
+                        Method of finding the closest color to block
   --png_atlas_filename PNG_ATLAS_FILENAME
                         PNG atlas filename
   --txt_atlas_filename TXT_ATLAS_FILENAME
