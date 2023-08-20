@@ -3,7 +3,7 @@ from typing import List
 
 import mcschematic
 
-def create_2d_schematic(blocks: List[List[str]], output_path: str, bottom_block="end_stone"):
+def create_2d_schematic(blocks: List[List[str]], output_path: str, bottom_block="black_wool"):
 	width = len(blocks[0])
 	height = len(blocks)
 

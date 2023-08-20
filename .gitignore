@@ -1,2 +1,3 @@
 __pycache__/
 blocks.json/
+.pytest_cache

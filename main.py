@@ -168,7 +168,7 @@ def main():
 
 	# Add the optional arguments
 	parser.add_argument('--filter', nargs='+', help='Filter options')
-	parser.add_argument('--scale_factor', type=int, help='Scale factor', default=0)
+	parser.add_argument('--scale_factor', type=float, help='Scale factor', default=0)
 	parser.add_argument('--compression_level', type=int, help='Compression level, greatly improves conversion speed, and loses some information along the way, do not set higher than 20, as it will cause very high memory consumption.', default=16)
 	parser.add_argument('--method', type=str,
 		    choices=["abs_diff", "euclidean", "chebyshev_distance", "manhattan_distance", "cosine_similarity", "hamming_distance", "canberra_distance"], help='Method of finding the closest color to block', default="canberra_distance", required=False)
